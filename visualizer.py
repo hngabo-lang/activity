@@ -1,6 +1,4 @@
 """
-visualizer.py
---------------
 This file has two jobs:
 1. Run an algorithm at several different sizes and time each run.
 2. Turn those timings into a graph, save it as a picture, and also
