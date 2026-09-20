@@ -1,18 +1,10 @@
 """
-app.py
--------
 This is the actual web server. It has one main job: when someone
 visits /analyze with an algorithm name, a step size, and a max size,
 it runs that algorithm at increasing sizes, times it, makes a graph,
 and sends back a JSON response with the timing data and the graph
 (both saved as a file and included as base64 text).
 
-How to run it:
-    pip install -r requirements.txt
-    python app.py
-
-Then open this in your browser:
-    http://localhost:8000/analyze?algo=linear_search&step=1000&n_max=10000
 """
 
 from flask import Flask, jsonify, request
