@@ -1,16 +1,3 @@
-"""
-algorithms.py
---------------
-This file holds every algorithm we can test, plus some simple
-dictionaries that describe them (their Big-O complexity, and the
-biggest "n" we should let someone test them with, so the server
-doesn't freeze on a huge run).
-
-Each algorithm function takes one number, n, builds its own test
-data of that size, and does some work. We don't care what it
-returns - we only care how long it takes to run.
-"""
-
 import random
 
 
