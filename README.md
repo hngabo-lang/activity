@@ -1,6 +1,6 @@
 # activity
 How to run it:
-    pip install -r requirements.txt
+    pip install -r requirements.txt then 
     python app.py
 
 Then open this in your browser:
