@@ -1,11 +1,3 @@
-"""
-This file has two jobs:
-1. Run an algorithm at several different sizes and time each run.
-2. Turn those timings into a graph, save it as a picture, and also
-   turn that same picture into a base64 string (a way of writing an
-   image as plain text, so it can be put inside a JSON response).
-"""
-
 import os
 import time
 import io
