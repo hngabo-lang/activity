@@ -1,111 +1,117 @@
-"""
-This is the actual web server. It has one main job: when someone
-visits /analyze with an algorithm name, a step size, and a max size,
-it runs that algorithm at increasing sizes, times it, makes a graph,
-and sends back a JSON response with the timing data and the graph
-(both saved as a file and included as base64 text).
+import time
+import base64
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.animation as anim
+from flask import Flask, request, jsonify 
 
-"""
 
-from flask import Flask, jsonify, request
 
-from algorithms import ALGORITHMS, MAX_SIZES, COMPLEXITY_LABELS
-from visualizer import run_and_time_algorithm, make_graph_and_save
+def time_complexity_visualiser(algorithm, n_min, n_max, n_step):
+    times = []
+    input_sizes = list(range(n_min, n_max + n_step, n_step))
+
+    for n in input_sizes:
+        start_time = time.time()
+        algorithm(n)
+        end_time = time.time()
+        times.append(end_time - start_time)
+
+
+    fig, ax = plt.subplots()
+    ax.plot(input_sizes, times, 'o-')
+    ax.set_xlabel('Input Size')
+    ax.set_ylabel('Running Time (seconds)')
+    ax.set_title('Algorithm Time Complexity Visualiser')
+
+
+    fig.savefig('time_complexity_plot.png')
+    plt.close(fig)
+
+    with open ('time_complexity_plot.png', 'rb') as f:
+        imag_base64 = base64.b64encode(f.read()).decode('utf-8')
+    return imag_base64
+    # plt.ion()
+    # fig, ax = plt.subplots()
+    # ax.set_xlabel('Input Size')
+    # ax.set_ylabel('Running Time (seconds)')
+    # ax.set_title('Algorithm Time Complexity Visualiser (Live)')
+    # line, = ax.plot([], [], 'o-')
+
+    # for i, n in enumerate(input_sizes):
+    #     start_time = time.time()
+    #     algorithm(n)
+    #     end_time = time.time()
+    #     times.append(end_time - start_time)
+
+    #     line.set_data(input_sizes[:i + 1], times)
+    #     ax.relim()
+    #     ax.autoscale_view()
+    #     plt.draw()
+    #     plt.pause(0.1)
+
+    # plt.ioff()
+    # plt.show()
+
+
+def binary_search(n):
+    arr = list(range(n))
+    target = n - 1
+    left, right = 0, len(arr) - 1
+    while left <= right:
+        mid = left + (right - left) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1
+def linear_search(n):
+    arr = list(range(n))
+    target = n - 1
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i
+def bubble_sort(n):
+    arr = list(range(n, 0, -1))
+    for i in range(len(arr)):
+        for j in range(0, len(arr) - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+def nested_loop(n):
+    for i in range(n):
+        for j in range(n):
+            pass
+
+
+Algorithms = {
+    'binary_search': binary_search,
+    'linear_search': linear_search,
+    'bubble_sort': bubble_sort,
+    'nested_loop': nested_loop
+}
 
 app = Flask(__name__)
-
-
-@app.route('/')
-def home_page():
-    # A friendly message so people know the server is alive and
-    # know how to use it.
-    return jsonify({
-        'message': 'Time Complexity Visualizer is running!',
-        'try_this': '/analyze?algo=linear_search&step=1000&n_max=10000',
-        'supported_algorithms': list(ALGORITHMS.keys())
-    })
-
-
-@app.route('/algorithms')
-def list_algorithms():
-    # Shows every algorithm we support, along with its Big-O label
-    # and the biggest size we'll let someone test it with.
-    algorithm_info = {}
-    for name in ALGORITHMS:
-        algorithm_info[name] = {
-            'complexity': COMPLEXITY_LABELS[name],
-            'max_n': MAX_SIZES[name]
-        }
-    return jsonify(algorithm_info)
-
-
-@app.route('/analyze', methods=['GET'])
+@app.route('/analyze')
 def analyze():
-    # Read the query parameters from the URL, e.g.
-    # ?algo=linear_search&step=1000&n_max=10000
-    algo_name = request.args.get('algo')
-    step_text = request.args.get('step')
-    n_max_text = request.args.get('n_max')
+    algo = request.args.get('algo')
+    step = request.args.get('step', type=int)
+    n_max = request.args.get('n_max', type=int)
 
-    # People sometimes type the algo name with quotes or brackets by
-    # accident (like algo=['linear_search'), so we clean that up.
-    if algo_name is not None:
-        algo_name = algo_name.strip()
-        algo_name = algo_name.strip("[]'\"")
-
-    # Make sure all three parameters were actually given.
-    if algo_name is None or step_text is None or n_max_text is None:
-        return jsonify({
-            'error': 'Please provide algo, step, and n_max as query parameters.'
-        }), 400
-
-    # Check the algorithm name is one we actually support.
-    if algo_name not in ALGORITHMS:
-        return jsonify({
-            'error': "I don't know an algorithm called '" + algo_name + "'.",
-            'supported_algorithms': list(ALGORITHMS.keys())
-        }), 400
-
-    # step and n_max need to be whole numbers. People might type
-    # commas like 10,000, so we remove those before converting.
-    try:
-        step = int(step_text.replace(',', ''))
-        n_max = int(n_max_text.replace(',', ''))
-    except ValueError:
-        return jsonify({'error': 'step and n_max must be whole numbers.'}), 400
-
-    if step <= 0:
-        return jsonify({'error': 'step must be greater than 0.'}), 400
-    if n_max < 0:
-        return jsonify({'error': 'n_max cannot be negative.'}), 400
-
-    # Some algorithms get extremely slow with a big n, so we check
-    # against the safe limit we set for this one.
-    biggest_allowed = MAX_SIZES[algo_name]
-    if n_max > biggest_allowed:
-        return jsonify({
-            'error': ('n_max for ' + algo_name + ' cannot be more than '
-                       + str(biggest_allowed) + ' (a run that big would take too long).')
-        }), 400
-
-    # The minimum size is always assumed to be 0.
-    n_min = 0
-
-    sizes_tested, times_taken = run_and_time_algorithm(algo_name, n_min, n_max, step)
-    filename, base64_image = make_graph_and_save(algo_name, sizes_tested, times_taken)
-
+    algorithm = Algorithms[algo]
+    image_base64 = time_complexity_visualiser(algorithm, 0, n_max, step)
     return jsonify({
-        'algorithm': algo_name,
-        'complexity': COMPLEXITY_LABELS[algo_name],
-        'n_min': n_min,
-        'n_max': n_max,
+        'algorithm': algo,
         'step': step,
-        'input_sizes': sizes_tested,
-        'execution_times': times_taken,
-        'image_path': filename,
-        'image_base64': base64_image
+        'n_max': n_max,
+        'image_base64': image_base64
     })
 
 
-if __name__ == '__main__':
-    app.run(host='localhost', port=8000, debug=True)
+#time_complexity_visualiser(binary_search, 100, 10000, 500)
+#time_complexity_visualiser(linear_search, 100, 10000, 500)
+#time_complexity_visualiser(bubble_sort, 100, 10000, 100)
+#time_complexity_visualiser(nested_loop, 100, 1000, 100)
