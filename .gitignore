@@ -1,5 +1,10 @@
-   db
-   sqlite3
-   png
-   gif
-   json
+# Databases
+*.db
+*.sqlite3
+
+# Generated plots/animations
+*.png
+*.gif
+
+# Generated data files
+*.json
