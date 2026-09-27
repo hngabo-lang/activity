@@ -1,0 +1,8 @@
+{
+  "loop": "nested_loop",
+  "n_min": 100,
+  "n_max": 1000,
+  "n_step": 100,
+  "plot_url": "http://localhost:5000/plot",
+  "animation_url": "http://localhost:5000/animation"
+}
